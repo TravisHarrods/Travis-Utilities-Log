@@ -1,4 +1,4 @@
-package TRAVIS::Utilities::Log;
+package Travis::Utilities::Log;
 
 #==============================================================================
 # Class TRAVIS::Utilities::Log is a log manager the allow to write logs data.
@@ -16,11 +16,6 @@ use Moose;
 # Base
 use English;
 use File::Basename;
-
-#==============================================================================
-# VERSION
-#==============================================================================
-our $VERSION = 0.01;
 
 #==============================================================================
 # STATIC PRIVATE VARIABLES
@@ -330,5 +325,7 @@ sub trace
     $self->print_msg('TRACE', "\e[35m", $msg, 0, 1);
   }
 }
+
+no Moose;
 
 return(1);
