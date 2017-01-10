@@ -31,7 +31,7 @@ my %html_colors = (
 #==============================================================================
 # ATTRIBUTS
 #==============================================================================
-our $VERSION = '0.0-1';
+our $VERSION = 0.01;
 # PID of the process
 has 'pid' => (
   is => 'ro',
@@ -93,7 +93,7 @@ has 'html' => (
    isa => 'Bool',
    default => 0,
    reader => 'get_html',
-   writer => 'set_html'   
+   writer => 'set_html'
 );
 # Max chararcter width
 has 'width' => (
@@ -135,7 +135,7 @@ sub BUILD
       ';'.$self->get_split_file.';'.$self->get_output_file;
     close(PID);
   }
-  
+
   # Disable colours for windows users
   if($^O eq 'MSWin32')
   {
@@ -186,7 +186,7 @@ sub print_msg
   {
   	$stderr = 0;
   }
-  
+
   # Retrieve call data
   if($type ne 'INFO')
   {
@@ -194,17 +194,17 @@ sub print_msg
      $f = basename($f);
      $msg.=' (in '.$f.', line '.$l.')';
   }
-  
+
   # Format the message
   my $spacer = 13+length($type);
   my $width = $self->get_width - $spacer;
   my $span = " "x$spacer;
   $msg =~ s/(.{$width})/$1\n$span/g;
-    
+
   # Prepare the date info
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   my $date = '['.sprintf("%02d:%02d:%02d", $hour, $min, $sec).']';
-  
+
   # Prepare the message
   my $out_msg_nc = $date.' '.$type.': '.$msg."\n";
   my $out_msg_c = '';
@@ -213,7 +213,7 @@ sub print_msg
     if($self->get_html == 1)
     {
       $out_msg_c = '<B><span style="color:grey">'.$date.'</span>'.
-         '<span style="color:'.$html_colors{$colour}.'">'.$type.'</span></B>'.$msg."\n";      
+         '<span style="color:'.$html_colors{$colour}.'">'.$type.'</span></B>'.$msg."\n";
     }
     else
     {
@@ -225,7 +225,7 @@ sub print_msg
   {
     $out_msg_c = $out_msg_nc;
   }
-  
+
   # Print into stdout
   if($self->get_sink_std == 1)
   {
@@ -242,7 +242,7 @@ sub print_msg
     	print STDOUT $out_msg_c;
     }
   }
-  
+
   # Print into file
   if($self->get_sink_file == 1)
   {
@@ -262,7 +262,7 @@ sub info
 {
   my $self = shift;
   my $msg = shift;
-  
+
   if($self->get_level <= 1)
   {
     $self->print_msg('INFO', "\e[32m", $msg, 0, 1);
@@ -274,7 +274,7 @@ sub warning
 {
   my $self = shift;
   my $msg = shift;
-  
+
   if($self->get_level <= 2)
   {
     $self->print_msg('WARNING', "\e[33m", $msg, 1, 1);
@@ -286,7 +286,7 @@ sub error
 {
   my $self = shift;
   my $msg = shift;
-  
+
   if($self->get_level <= 3)
   {
     $self->print_msg('ERROR', "\e[31m", $msg, 1, 1);
@@ -298,7 +298,7 @@ sub fatal
 {
   my $self = shift;
   my $msg = shift;
-  
+
   $self->print_msg('FATAL ERROR', "\e[31m", $msg, 2, 1);
 }
 
@@ -307,7 +307,7 @@ sub debug
 {
   my $self = shift;
   my $msg = shift;
-  
+
   if($self->get_level == 0)
   {
     $self->print_msg('DEBUG', "\e[34m", $msg, 0, 1);
@@ -319,7 +319,7 @@ sub trace
 {
   my $self = shift;
   my $msg = shift;
-  
+
   if($self->get_level == 0)
   {
     $self->print_msg('TRACE', "\e[35m", $msg, 0, 1);
