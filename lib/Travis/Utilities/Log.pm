@@ -3,9 +3,10 @@ package Travis::Utilities::Log;
 #==============================================================================
 # Class TRAVIS::Utilities::Log is a log manager the allow to write logs data.
 #
-# Author: Travis Harrods <travis.harrods@gmail.com>
+# Authors: Travis Harrods <travis.harrods@gmail.com>
+#          Hugo Devillers <hugo.devillers@gmail.com>
 # Created: 07-MAI-2015
-# Updated: 23-SEP-2016
+# Updated: 19-JAN-2017
 #==============================================================================
 
 #==============================================================================
@@ -16,6 +17,15 @@ use Moose;
 # Base
 use English;
 use File::Basename;
+#use Term::ANSIColor; # A more readable way to put colors in terms.
+use Term::ReadKey;   # Get stats from the term
+
+# Emulate ANSI console on Windows systems
+if( $^O eq 'MSWin32' ) {
+  # TODO: test availability and disable color if not available.
+  require Win32::Console::ANSI;
+}
+
 
 #==============================================================================
 # STATIC PRIVATE VARIABLES
@@ -31,7 +41,7 @@ my %html_colors = (
 #==============================================================================
 # ATTRIBUTS
 #==============================================================================
-our $VERSION = 0.01;
+our $VERSION = 0.02;
 # PID of the process
 has 'pid' => (
   is => 'ro',
@@ -136,16 +146,20 @@ sub BUILD
     close(PID);
   }
 
+  # Get terminal size
+  my ($wchar, $hchar, $wpixel, $hpixel) = GetTerminalSize();
+  $self->set_width($wchar);
+
   # Disable colours for windows users
-  if($^O eq 'MSWin32')
-  {
-    $self->set_colours(0);
-  }
-  else
-  {
-    my $cur_width = `tput cols`;
-    $self->set_width(int($cur_width));
-  }
+  #if($^O eq 'MSWin32')
+  #{
+  #  $self->set_colours(0);
+  #}
+  #else
+  #{
+  #  my $cur_width = `tput cols`;
+  #  $self->set_width(int($cur_width));
+  #}
 }
 
 #==============================================================================

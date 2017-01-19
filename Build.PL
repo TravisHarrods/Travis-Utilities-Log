@@ -11,7 +11,8 @@ my $builder = Module::Build->new(
   requires           => {
     'Moose'          => 0,
     'English'        => 0,
-    'File::Basename' => 0
+    'File::Basename' => 0,
+    'Term::ReadKey'  => 0
   },
   meta_merge => {
     ressources => {
