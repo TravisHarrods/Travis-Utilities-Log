@@ -17,7 +17,7 @@ use Moose;
 # Base
 use English;
 use File::Basename;
-#use Term::ANSIColor; # A more readable way to put colors in terms.
+use Term::ANSIColor; # A more readable way to put colors in terms.
 use Term::ReadKey;   # Get stats from the term
 
 # Emulate ANSI console on Windows systems
@@ -114,6 +114,41 @@ has 'width' => (
   writer => 'set_width'
 );
 
+# Default text message
+has 'default_text' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => 'hello, world'
+);
+
+# Default color
+has 'default_color' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => 'white on_green'
+);
+
+# Default date color
+has 'date_color' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => 'bold bright_black'
+);
+
+# Default type
+has 'default_type' => (
+  is      => 'rw',
+  isa     => 'Str',
+  default => 'LOG'
+);
+
+# Maximal type length
+has 'max_type_length' => (
+  is      => 'rw',
+  isa     => 'Int',
+  default => 10
+);
+
 #==============================================================================
 # BUILDER
 #==============================================================================
@@ -182,6 +217,62 @@ sub DEMOLISH
 #==============================================================================
 # METHODS
 #==============================================================================
+# Generic function to display a message
+sub message {
+  my $self = shift;
+  my $args = shift;
+
+  # Default values
+  my $type   = $self->default_type();
+  my $text   = $self->default_text();
+  my $color  = $self->default_color();
+  my $stderr = 0;
+
+  # Check arguements
+  if( exists($args->{'text'}) ) {
+    $text = $args->{'text'};
+  }
+  if( exists($args->{'type'}) ) {
+    $type = $args->{'type'};
+  }
+  if( exists($args->{'color'}) ) {
+    $color = $args->{'color'};
+  }
+
+  # Prepare the date info
+  my @months = qw(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec);
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+  my $date = '['.sprintf("%02d %s %02d:%02d:%02d",
+    $mday, $months[$mon], $hour, $min, $sec).']';
+
+  # Prepare text message
+  my $spacer = length($date) + $self->max_type_length() + 2;
+  my $width = $self->get_width() - $spacer;
+  my $span = " "x$spacer;
+  $text =~ s/(.{$width})/$1\n$span/g;
+
+  # Prepare type tag
+  my $char_type = $self->format_type($type);
+
+  print color($self->date_color()), $date, color('reset'), color($color),
+    $char_type, color('reset'), ': ', $text, "\n";
+
+}
+
+# Format type info
+sub format_type {
+  my $self = shift;
+  my $type = shift;
+
+  my $max_length = $self->max_type_length();
+  my $type_length = length($type);
+  my $left_spacer = int( ($max_length - $type_length)/2 );
+  my $right_spacer = $max_length - $left_spacer - $type_length;
+
+  my $char_type = (' 'x$left_spacer).$type.(' 'x$right_spacer);
+  return($char_type);
+}
+
 # Generic function for printing messages
 sub print_msg
 {
