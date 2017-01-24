@@ -123,19 +123,37 @@ has 'default_message_types' => (
     info => {
       color     => 'white on_green',
       do_caller => 0,
-      std       => 1,
+      stderr    => 0,
       die       => 0
     },
     warning => {
       color     => 'white on_yellow',
       do_caller => 1,
-      std       => 2,
+      stderr    => 1,
       die       => 0
     },
     error   => {
       color     => 'white on_red',
       do_caller => 1,
-      std       => 2,
+      stderr    => 1,
+      die       => 0
+    },
+    fatal   => {
+      color     => 'white on_red',
+      do_caller => 1,
+      stderr    => 1,
+      die       => 1
+    },
+    debug   => {
+      color     => 'white on_cyan',
+      do_caller => 1,
+      stderr    => 0,
+      die       => 0
+    },
+    trace   => {
+      color     => 'white on_magenta',
+      do_caller => 0,
+      stderr    => 0,
       die       => 0
     }
   }},
@@ -152,7 +170,9 @@ has 'default_values' => (
     text      => 'hello, world',
     color     => 'white on_green',
     type      => 'LOG',
-    do_caller => 0
+    do_caller => 0,
+    stderr    => 0,
+    die       => 0
   }},
   handles => {
     getDefault => 'get'
@@ -291,7 +311,8 @@ sub message {
   my $text      = $self->getDefault('text');
   my $color     = $self->getDefault('color');
   my $do_caller = $self->getDefault('do_caller');
-  my $stderr = 0;
+  my $stderr    = $self->getDefault('stderr');
+  my $die       = $self->getDefault('die');
 
   # Check arguements
   if( exists($args->{'text'}) ) {
@@ -305,6 +326,12 @@ sub message {
   }
   if( exists($args->{'do_caller'}) ) {
     $do_caller = $args->{'do_caller'};
+  }
+  if( exists($args->{'stderr'}) ) {
+    $stderr = $args->{'stderr'};
+  }
+  if( exists($args->{'die'}) ) {
+    $die = $args->{'die'};
   }
 
   # Prepare the date info
@@ -326,8 +353,33 @@ sub message {
   # Prepare type tag
   my $char_type = $self->format_type($type);
 
-  print color($self->date_color()), $date, color('reset'), color($color),
-    $char_type, color('reset'), ': ', $text, "\n";
+  if( $self->get_sink_std() ) {
+    if($stderr) {
+      print STDERR color($self->date_color()), $date, color('reset'), color($color),
+        $char_type, color('reset'), ': ', $text, "\n";
+    } else {
+      print color($self->date_color()), $date, color('reset'), color($color),
+        $char_type, color('reset'), ': ', $text, "\n";
+    }
+  }
+
+  # Print into file
+  if($self->get_sink_file == 1)
+  {
+    my $output = $self->get_output_file;
+    if($self->get_split_file == 1)
+    {
+      $output .= '.'.$type;
+    }
+    open(LOG, '>>'.$output);
+    print LOG $date.$char_type.': '.$text."\n";
+    close(LOG);
+  }
+
+  # Need to die
+  if( $die ) {
+    exit();
+  }
 
 }
 
@@ -471,37 +523,37 @@ sub print_msg
 # }
 
 # Print a fatal error leading to a die (always displayed)
-sub fatal
-{
-  my $self = shift;
-  my $msg = shift;
-
-  $self->print_msg('FATAL ERROR', "\e[31m", $msg, 2, 1);
-}
+# sub fatal
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   $self->print_msg('FATAL ERROR', "\e[31m", $msg, 2, 1);
+# }
 
 # Print a debug message (lvl 0)
-sub debug
-{
-  my $self = shift;
-  my $msg = shift;
-
-  if($self->get_level == 0)
-  {
-    $self->print_msg('DEBUG', "\e[34m", $msg, 0, 1);
-  }
-}
+# sub debug
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   if($self->get_level == 0)
+#   {
+#     $self->print_msg('DEBUG', "\e[34m", $msg, 0, 1);
+#   }
+# }
 
 # Print information trace, similar to debug (lvl 0)
-sub trace
-{
-  my $self = shift;
-  my $msg = shift;
-
-  if($self->get_level == 0)
-  {
-    $self->print_msg('TRACE', "\e[35m", $msg, 0, 1);
-  }
-}
+# sub trace
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   if($self->get_level == 0)
+#   {
+#     $self->print_msg('TRACE', "\e[35m", $msg, 0, 1);
+#   }
+# }
 
 no Moose;
 
