@@ -114,32 +114,57 @@ has 'width' => (
   writer => 'set_width'
 );
 
-# Default text message
-has 'default_text' => (
-  is      => 'rw',
-  isa     => 'Str',
-  default => 'hello, world'
+# Default message types
+has 'default_message_types' => (
+  traits => ['Hash'],
+  is     => 'rw',
+  isa    => 'HashRef',
+  default => sub{ {
+    info => {
+      color     => 'white on_green',
+      do_caller => 0,
+      std       => 1,
+      die       => 0
+    },
+    warning => {
+      color     => 'white on_yellow',
+      do_caller => 1,
+      std       => 2,
+      die       => 0
+    },
+    error   => {
+      color     => 'white on_red',
+      do_caller => 1,
+      std       => 2,
+      die       => 0
+    }
+  }},
+  handles => {
+    listMessageTypes => 'kv'
+  }
 );
 
-# Default color
-has 'default_color' => (
-  is      => 'rw',
-  isa     => 'Str',
-  default => 'white on_green'
+has 'default_values' => (
+  traits  => ['Hash'],
+  is      => 'ro',
+  isa     => 'HashRef',
+  default => sub { {
+    text      => 'hello, world',
+    color     => 'white on_green',
+    type      => 'LOG',
+    do_caller => 0
+  }},
+  handles => {
+    getDefault => 'get'
+  }
 );
+
 
 # Default date color
 has 'date_color' => (
   is      => 'rw',
   isa     => 'Str',
   default => 'bold bright_black'
-);
-
-# Default type
-has 'default_type' => (
-  is      => 'rw',
-  isa     => 'Str',
-  default => 'LOG'
 );
 
 # Maximal type length
@@ -185,6 +210,10 @@ sub BUILD
   my ($wchar, $hchar, $wpixel, $hpixel) = GetTerminalSize();
   $self->set_width($wchar);
 
+  # Create the methods to display messages
+  foreach my $kv ( $self->listMessageTypes() ) {
+    $self->_add_message_type($kv->[0], $kv->[1]);
+  }
   # Disable colours for windows users
   #if($^O eq 'MSWin32')
   #{
@@ -215,6 +244,41 @@ sub DEMOLISH
 }
 
 #==============================================================================
+# PRIVATE METHODS
+#==============================================================================
+sub _add_message_type {
+  my $self = shift;
+  my $type = shift;
+  my $args = shift;
+
+  $self->meta->add_method( $type => sub {
+    my $self = shift;
+    my $text = shift;
+
+    $args->{'text'} = $text;
+    $args->{'type'} = uc $type;
+
+    $self->message($args);
+  });
+
+}
+
+sub _format_caller {
+  my $self = shift;
+  my $span = shift;
+
+  my $call = "\n";
+  my $depth = 2;
+  my @info = caller($depth);
+  while (@info) {
+    $call .= $span.$info[0].': line '.$info[2].' ('.(basename($info[1])).")\n";
+    $depth++;
+    @info  = caller($depth);
+  }
+  return($call);
+}
+
+#==============================================================================
 # METHODS
 #==============================================================================
 # Generic function to display a message
@@ -223,9 +287,10 @@ sub message {
   my $args = shift;
 
   # Default values
-  my $type   = $self->default_type();
-  my $text   = $self->default_text();
-  my $color  = $self->default_color();
+  my $type      = $self->getDefault('type');
+  my $text      = $self->getDefault('text');
+  my $color     = $self->getDefault('color');
+  my $do_caller = $self->getDefault('do_caller');
   my $stderr = 0;
 
   # Check arguements
@@ -237,6 +302,9 @@ sub message {
   }
   if( exists($args->{'color'}) ) {
     $color = $args->{'color'};
+  }
+  if( exists($args->{'do_caller'}) ) {
+    $do_caller = $args->{'do_caller'};
   }
 
   # Prepare the date info
@@ -250,6 +318,10 @@ sub message {
   my $width = $self->get_width() - $spacer;
   my $span = " "x$spacer;
   $text =~ s/(.{$width})/$1\n$span/g;
+
+  if( $do_caller == 1 ) {
+    $text .= $self->_format_caller($span);
+  }
 
   # Prepare type tag
   my $char_type = $self->format_type($type);
@@ -363,40 +435,40 @@ sub print_msg
 }
 
 # Print an information to the user shell (lvl 0 and 1)
-sub info
-{
-  my $self = shift;
-  my $msg = shift;
-
-  if($self->get_level <= 1)
-  {
-    $self->print_msg('INFO', "\e[32m", $msg, 0, 1);
-  }
-}
+# sub info
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   if($self->get_level <= 1)
+#   {
+#     $self->print_msg('INFO', "\e[32m", $msg, 0, 1);
+#   }
+# }
 
 # Print a warning message (lvl 0 to 2)
-sub warning
-{
-  my $self = shift;
-  my $msg = shift;
-
-  if($self->get_level <= 2)
-  {
-    $self->print_msg('WARNING', "\e[33m", $msg, 1, 1);
-  }
-}
+# sub warning
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   if($self->get_level <= 2)
+#   {
+#     $self->print_msg('WARNING', "\e[33m", $msg, 1, 1);
+#   }
+# }
 
 # Print an error message (that does not require a die) (lvl 0 to 3)
-sub error
-{
-  my $self = shift;
-  my $msg = shift;
-
-  if($self->get_level <= 3)
-  {
-    $self->print_msg('ERROR', "\e[31m", $msg, 1, 1);
-  }
-}
+# sub error
+# {
+#   my $self = shift;
+#   my $msg = shift;
+#
+#   if($self->get_level <= 3)
+#   {
+#     $self->print_msg('ERROR', "\e[31m", $msg, 1, 1);
+#   }
+# }
 
 # Print a fatal error leading to a die (always displayed)
 sub fatal
