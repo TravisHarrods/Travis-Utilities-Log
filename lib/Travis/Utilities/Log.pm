@@ -6,7 +6,7 @@ package Travis::Utilities::Log;
 # Authors: Travis Harrods <travis.harrods@gmail.com>
 #          Hugo Devillers <hugo.devillers@gmail.com>
 # Created: 07-MAI-2015
-# Updated: 19-JAN-2017
+# Updated: 24-JAN-2017
 #==============================================================================
 
 #==============================================================================
@@ -179,7 +179,6 @@ has 'default_values' => (
   }
 );
 
-
 # Default date color
 has 'date_color' => (
   is      => 'rw',
@@ -234,16 +233,6 @@ sub BUILD
   foreach my $kv ( $self->listMessageTypes() ) {
     $self->_add_message_type($kv->[0], $kv->[1]);
   }
-  # Disable colours for windows users
-  #if($^O eq 'MSWin32')
-  #{
-  #  $self->set_colours(0);
-  #}
-  #else
-  #{
-  #  my $cur_width = `tput cols`;
-  #  $self->set_width(int($cur_width));
-  #}
 }
 
 #==============================================================================
@@ -306,32 +295,11 @@ sub message {
   my $self = shift;
   my $args = shift;
 
-  # Default values
-  my $type      = $self->getDefault('type');
-  my $text      = $self->getDefault('text');
-  my $color     = $self->getDefault('color');
-  my $do_caller = $self->getDefault('do_caller');
-  my $stderr    = $self->getDefault('stderr');
-  my $die       = $self->getDefault('die');
-
-  # Check arguements
-  if( exists($args->{'text'}) ) {
-    $text = $args->{'text'};
-  }
-  if( exists($args->{'type'}) ) {
-    $type = $args->{'type'};
-  }
-  if( exists($args->{'color'}) ) {
-    $color = $args->{'color'};
-  }
-  if( exists($args->{'do_caller'}) ) {
-    $do_caller = $args->{'do_caller'};
-  }
-  if( exists($args->{'stderr'}) ) {
-    $stderr = $args->{'stderr'};
-  }
-  if( exists($args->{'die'}) ) {
-    $die = $args->{'die'};
+  my @parameters = qw/type text color do_coller stderr die/;
+  foreach my $p (@parameters) {
+    if( !exists($args->{$p}) ) {
+      $args->{$p} = $self->getDefault($p);
+    }
   }
 
   # Prepare the date info
@@ -344,41 +312,46 @@ sub message {
   my $spacer = length($date) + $self->max_type_length() + 2;
   my $width = $self->get_width() - $spacer;
   my $span = " "x$spacer;
-  $text =~ s/(.{$width})/$1\n$span/g;
+  $args->{'text'} =~ s/(.{$width})/$1\n$span/g;
 
-  if( $do_caller == 1 ) {
-    $text .= $self->_format_caller($span);
+  if( $args->{'do_caller'} ) {
+    $args->{'text'} .= $self->_format_caller($span);
   }
 
   # Prepare type tag
-  my $char_type = $self->format_type($type);
+  my $char_type = $self->format_type( $args->{'type'} );
 
+  # Prepare text
+  my $text_raw = $date.$char_type.': '.$args->{'text'}."\n";
+  my $text_ansi = color($self->date_color()).$date.color('reset').
+    color($args->{'color'}).$char_type.color('reset').': '.
+    $args->{'text'}."\n";
+
+  # Print message
   if( $self->get_sink_std() ) {
-    if($stderr) {
-      print STDERR color($self->date_color()), $date, color('reset'), color($color),
-        $char_type, color('reset'), ': ', $text, "\n";
+    if( $args->{'stderr'} ) {
+      print STDERR $text_ansi;
     } else {
-      print color($self->date_color()), $date, color('reset'), color($color),
-        $char_type, color('reset'), ': ', $text, "\n";
+      print $text_ansi;
     }
   }
 
   # Print into file
-  if($self->get_sink_file == 1)
+  if( $self->get_sink_file() )
   {
     my $output = $self->get_output_file;
     if($self->get_split_file == 1)
     {
-      $output .= '.'.$type;
+      $output .= '.'.$args->{'type'};
     }
     open(LOG, '>>'.$output);
-    print LOG $date.$char_type.': '.$text."\n";
+    print LOG $text_raw;
     close(LOG);
   }
 
   # Need to die
-  if( $die ) {
-    exit();
+  if( $args->{'die'} ) {
+    exit(1);
   }
 
 }
@@ -485,75 +458,6 @@ sub print_msg
     close(LOG);
   }
 }
-
-# Print an information to the user shell (lvl 0 and 1)
-# sub info
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   if($self->get_level <= 1)
-#   {
-#     $self->print_msg('INFO', "\e[32m", $msg, 0, 1);
-#   }
-# }
-
-# Print a warning message (lvl 0 to 2)
-# sub warning
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   if($self->get_level <= 2)
-#   {
-#     $self->print_msg('WARNING', "\e[33m", $msg, 1, 1);
-#   }
-# }
-
-# Print an error message (that does not require a die) (lvl 0 to 3)
-# sub error
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   if($self->get_level <= 3)
-#   {
-#     $self->print_msg('ERROR', "\e[31m", $msg, 1, 1);
-#   }
-# }
-
-# Print a fatal error leading to a die (always displayed)
-# sub fatal
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   $self->print_msg('FATAL ERROR', "\e[31m", $msg, 2, 1);
-# }
-
-# Print a debug message (lvl 0)
-# sub debug
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   if($self->get_level == 0)
-#   {
-#     $self->print_msg('DEBUG', "\e[34m", $msg, 0, 1);
-#   }
-# }
-
-# Print information trace, similar to debug (lvl 0)
-# sub trace
-# {
-#   my $self = shift;
-#   my $msg = shift;
-#
-#   if($self->get_level == 0)
-#   {
-#     $self->print_msg('TRACE', "\e[35m", $msg, 0, 1);
-#   }
-# }
 
 no Moose;
 
