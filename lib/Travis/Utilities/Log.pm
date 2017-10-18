@@ -1,5 +1,41 @@
 package Travis::Utilities::Log;
 
+=pod
+
+=head1 NAME
+
+  Travis::Utilities::Log - Log manager based on Moose.
+
+=head1 VERSION
+
+  This documentation refers to Travis::Utilities::Log version 0.02.
+
+=head1 SYNOPSIS
+
+  use Travis::Utilities::Log;
+
+  my $log = Travis::Utilities::Log->new();
+  $log->info('Hi, this is a log message.');
+
+=head1 DESCRIPTION
+
+This Moose class is a log manager that can throw typed message in standard
+outputs and/or file outputs. It is highly configurable. Settings are attached
+to PID at the first instance, hence, each further instances of this class
+are automatically set.
+
+=head1 AUTHORS
+
+=over
+
+=item Hugo Devillers - (hugo.devillers@gmail.com)
+
+=item Travis Harrods - (travis.harrods@gmail.com)
+
+=back
+
+=cut
+
 #==============================================================================
 # Class TRAVIS::Utilities::Log is a log manager the allow to write logs data.
 #
